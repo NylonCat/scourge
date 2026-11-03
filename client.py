@@ -11,24 +11,41 @@ async def rx(reader, writer):
 
 async def main(rx_port, tx_port, nome):
     server = await asyncio.start_server(rx, "127.0.0.1", rx_port)   # Opens connection from rx_port
-    print("Waiting for connection...")
+    writer = None
 
-    while True:  # Retry until other peer is online
-        try:
-            _, writer = await asyncio.open_connection("127.0.0.1", tx_port)
-            break
-        except ConnectionRefusedError:
-            await asyncio.sleep(1)
+    try:
+        print("Waiting for connection...")
+        while True:     # Wait for peer to connect
+            try:
+                _, writer = await asyncio.open_connection("127.0.0.1", tx_port)
+                break
+            except ConnectionRefusedError:
+                await asyncio.sleep(1)
 
-    print("Connection estabilished")
-    loop = asyncio.get_running_loop()     # Creates a loop for input text
-    while True:
-        testo = await loop.run_in_executor(None, input, "> ")
-        msg = {"from": nome, "text": testo, "ts": time.time()}
-        writer.write((json.dumps(msg) + "\n").encode())
-        await writer.drain()
+        print("Connection established")
+        loop = asyncio.get_running_loop()         # Allows input() to not block all main()
+        while True:
+            testo = await loop.run_in_executor(None, input, "> ")       # Note: it will generate a KeyboardInterrupt error anyways
+            msg = {"from": nome, "text": testo, "ts": time.time()}
+            writer.write((json.dumps(msg) + "\n").encode())
+            await writer.drain()
+    except (ConnectionError, EOFError):
+        print("\nPeer disconnected")
+    finally:
+        print("Closing program")
+        if writer:      # Avoids errors if connection was never estabilished
+            writer.close()
+            try:        # Avoids BrokenPipe if peer tries to close a connection with an already down peer
+                await writer.wait_closed()
+            except (ConnectionError, OSError):
+                pass
+        server.close()
+        await server.wait_closed()
 
 # RX port = port where client recieves messages
 # TX port = port of the other client to send messages to
 if __name__ == "__main__":
-    asyncio.run(main(int(sys.argv[1]), int(sys.argv[2]), sys.argv[3]))       # Insert RX port and TX port
+    try:
+        asyncio.run(main(int(sys.argv[1]), int(sys.argv[2]), sys.argv[3]))       # Insert RX port and TX port
+    except KeyboardInterrupt:
+        pass
