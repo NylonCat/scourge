@@ -4,8 +4,9 @@ async def rx(reader, writer):
     while riga := await reader.readline():
         try:
             msg = json.loads(riga.decode().strip())
-            print(f"\n[{time.strftime('%H:%M:%S', time.localtime(msg['ts']))}] {msg['from']}: {msg['text']}\n>")
-        except (json.JSONDecodeError, KeyError):
+            print(f"\n[{time.strftime('%H:%M:%S', time.localtime(msg['ts']))}] {msg['from']}: {msg['text']}")
+            print("> ", end="", flush=True)
+        except (json.JSONDecodeError, KeyError, TypeError):
             print("\n[messaggio non valido ignorato]")
 
 async def main(rx_port, tx_port, nome):
