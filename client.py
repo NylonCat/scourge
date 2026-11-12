@@ -18,8 +18,8 @@ async def rx(reader, writer):
         except (json.JSONDecodeError, KeyError, TypeError):
             print("\n[messaggio non valido ignorato]")
 
-async def main(rx_port, tx_port, username):
-    server = await asyncio.start_server(rx, "127.0.0.1", rx_port)   # Opens connection from rx_port
+async def main(rx_port, tx_port, username, ip):
+    server = await asyncio.start_server(rx, "", rx_port)   # Opens connection from rx_port
     writer = None
 
     # Key generation for signing messages
@@ -30,7 +30,7 @@ async def main(rx_port, tx_port, username):
         print("Waiting for connection...")
         while True:     # Wait for peer to connect
             try:
-                _, writer = await asyncio.open_connection("127.0.0.1", tx_port)
+                _, writer = await asyncio.open_connection(ip, tx_port)
                 break
             except ConnectionRefusedError:
                 await asyncio.sleep(1)
@@ -65,6 +65,6 @@ async def main(rx_port, tx_port, username):
 # TX port = port of the other client to send messages to
 if __name__ == "__main__":
     try:
-        asyncio.run(main(int(sys.argv[1]), int(sys.argv[2]), sys.argv[3]))       # Insert RX port and TX port
+        asyncio.run(main(int(sys.argv[1]), int(sys.argv[2]), sys.argv[3], sys.argv[4]))       # Insert RX port TX port, username, ip of the other peer
     except KeyboardInterrupt:
         pass
