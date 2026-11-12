@@ -6,15 +6,22 @@ async def rx(reader, writer):
     while riga := await reader.readline():
         try:
             msg = json.loads(riga.decode().strip())
+            if msg.get("type") == "hello":
+                print(f"\n[{msg['from']} sent its public key: {msg['sign_pub']}]")
+                print("> ", end="", flush=True)
+                continue
             print(f"\n[{time.strftime('%H:%M:%S', time.localtime(msg['ts']))}] {msg['from']}: {msg['text']}")
             print("> ", end="", flush=True)
         except (json.JSONDecodeError, KeyError, TypeError):
             print("\n[messaggio non valido ignorato]")
 
-async def main(rx_port, tx_port, nome):
+async def main(rx_port, tx_port, username):
     server = await asyncio.start_server(rx, "127.0.0.1", rx_port)   # Opens connection from rx_port
     writer = None
-    chiave_firma = SigningKey.generate()
+
+    # Key generation for signing messages
+    signing_keys = SigningKey.generate()        # Public and private keys
+    public_key = bytes(signing_keys.verify_key) # Public key converted to bytes
 
     try:
         print("Waiting for connection...")
@@ -26,10 +33,16 @@ async def main(rx_port, tx_port, nome):
                 await asyncio.sleep(1)
 
         print("Connection established")
+
+        # Hello message
+        hello = {"type": "hello", "from": username, "sign_pub": base64.b64encode(public_key).decode()}
+        writer.write((json.dumps(hello) + "\n").encode())
+        await writer.drain()
+
         loop = asyncio.get_running_loop()         # Allows input() to not block all main()
         while True:
             testo = await loop.run_in_executor(None, input, "> ")       # Note: it will generate a KeyboardInterrupt error anyways
-            msg = {"from": nome, "text": testo, "ts": time.time()}
+            msg = {"from": username, "text": testo, "ts": time.time()}
             writer.write((json.dumps(msg) + "\n").encode())
             await writer.drain()
     except (ConnectionError, EOFError):
