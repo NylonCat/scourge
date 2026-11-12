@@ -3,10 +3,13 @@ from nacl.signing import SigningKey, VerifyKey
 from nacl.exceptions import BadSignatureError
 
 async def rx(reader, writer):
+    peer_key = None
+
     while riga := await reader.readline():
         try:
             msg = json.loads(riga.decode().strip())
             if msg.get("type") == "hello":
+                peer_key = VerifyKey(base64.b64decode(msg["sign_pub"]))
                 print(f"\n[{msg['from']} sent its public key: {msg['sign_pub']}]")
                 print("> ", end="", flush=True)
                 continue
