@@ -1,4 +1,6 @@
-import asyncio, sys, json, time
+import asyncio, sys, json, time, base64
+from nacl.signing import SigningKey, VerifyKey
+from nacl.exceptions import BadSignatureError
 
 async def rx(reader, writer):
     while riga := await reader.readline():
@@ -12,6 +14,7 @@ async def rx(reader, writer):
 async def main(rx_port, tx_port, nome):
     server = await asyncio.start_server(rx, "127.0.0.1", rx_port)   # Opens connection from rx_port
     writer = None
+    chiave_firma = SigningKey.generate()
 
     try:
         print("Waiting for connection...")
